@@ -9,8 +9,10 @@
 #include <stdbool.h>
 #include <assert.h>
 #include "pgm.h"
+#ifdef ENABLE_USB
 #include "stlink.h"
 #include "stlinkv2.h"
+#endif
 #include "stm8.h"
 #include "ihex.h"
 
@@ -23,6 +25,7 @@ extern int optreset;
 #endif
 
 programmer_t pgms[] = {
+#ifdef ENABLE_USB
 	{ 	"stlink",
 		0x0483, // USB vid
 		0x3744, // USB pid
@@ -42,6 +45,7 @@ programmer_t pgms[] = {
 		stlink2_swim_read_range,
 		stlink2_swim_write_range,
 	},
+#endif
 	{ NULL },
 };
 
@@ -76,38 +80,6 @@ void dump_pgms(programmer_t *pgms) {
 bool is_ext(const char *filename, const char *ext) {
 	char *ext_begin = strrchr(filename, '.');
 	return(ext_begin && strcmp(ext_begin, ext) == 0);
-}
-
-bool usb_init(programmer_t *pgm, unsigned int vid, unsigned int pid) {
-	libusb_device **devs;
-	libusb_context *ctx = NULL;
-
-	int r;
-	ssize_t cnt;
-	r = libusb_init(&ctx);
-	if(r < 0) return(false);
-
-	libusb_set_debug(ctx, 3);
-	cnt = libusb_get_device_list(ctx, &devs);
-	if(cnt < 0) return(false);
-
-	pgm->dev_handle = libusb_open_device_with_vid_pid(ctx, vid, pid);
-	pgm->ctx = ctx;
-	assert(pgm->dev_handle);
-
-	libusb_free_device_list(devs, 1); //free the list, unref the devices in it
-
-	if(libusb_kernel_driver_active(pgm->dev_handle, 0) == 1) { //find out if kernel driver is attached
-		int r = libusb_detach_kernel_driver(pgm->dev_handle, 0);
-		assert(r == 0);
-	}
-
-#ifdef __APPLE__
-	r = libusb_claim_interface(pgm->dev_handle, 0);
-	assert(r == 0);
-#endif
-
-	return(true);
 }
 
 const stm8_device_t *get_part(const char *name)
@@ -280,8 +252,6 @@ int main(int argc, char **argv) {
 		spawn_error("No filename has been specified");
 	if(!action || !start_addr_specified || !strlen(filename))
 		print_help_and_exit(argv[0], true);
-	if(!usb_init(pgm, pgm->usb_vid, pgm->usb_pid))
-		spawn_error("Couldn't initialize stlink");
 	if(!pgm->open(pgm))
 		spawn_error("Error communicating with MCU. Please check your SWIM connection.");
 	FILE *f;

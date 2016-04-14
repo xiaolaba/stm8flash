@@ -12,6 +12,7 @@
 #include "try.h"
 #include "byte_utils.h"
 #include "stlinkv2.h"
+#include "usb.h"
 
 unsigned char *pack_int16(uint16_t word, unsigned char *out);
 
@@ -26,7 +27,7 @@ int stlink2_write_and_read_byte(programmer_t *pgm, unsigned char byte, unsigned 
 static unsigned int msg_transfer(programmer_t *pgm, unsigned char *buf, unsigned int length, int direction) {
 	int bytes_transferred;
 	int ep = (direction == LIBUSB_ENDPOINT_OUT) ? 2 : 1;
-	libusb_bulk_transfer(pgm->dev_handle, ep | direction, buf, length, &bytes_transferred, 0);
+	libusb_bulk_transfer(DEV_HANDLE(pgm), ep | direction, buf, length, &bytes_transferred, 0);
 	if(bytes_transferred != length) ERROR2("IO error: expected %d bytes but %d bytes transferred\n", length, bytes_transferred);
 	return bytes_transferred;
 }
@@ -76,6 +77,10 @@ static void stlink2_cmd(programmer_t *pgm, unsigned int cmd, unsigned int length
 }
 
 bool stlink2_open(programmer_t *pgm) {
+	if(!usb_init(pgm, pgm->usb_vid, pgm->usb_pid)) {
+		fprintf(stderr, "Couldn't initialize stlink");
+		return false;
+	}
 	stlink2_cmd(pgm, 0xf500, 0);
 	switch(msg_recv_int16(pgm)) {
 		case 0x0100:

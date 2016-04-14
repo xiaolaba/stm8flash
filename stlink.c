@@ -15,6 +15,7 @@
 #include "pgm.h"
 #include "stlink.h"
 #include "utils.h"
+#include "usb.h"
 
 #define STLK_FLAG_ERR 0x01
 #define STLK_FLAG_BUFFER_FULL 0x04
@@ -36,7 +37,7 @@ void stlink_send_message(programmer_t *pgm, int count, ...) {
 	memset(data, 0, pgm->out_msg_size);
 	for(i = 0; i < count; i++)
 		data[i] = va_arg(ap, int);
-	r = libusb_bulk_transfer(pgm->dev_handle, (2 | LIBUSB_ENDPOINT_OUT), data, pgm->out_msg_size, &actual, 0);
+	r = libusb_bulk_transfer(DEV_HANDLE(pgm), (2 | LIBUSB_ENDPOINT_OUT), data, pgm->out_msg_size, &actual, 0);
 	assert(r == 0);
 	pgm->msg_count++;
 	return;
@@ -44,7 +45,7 @@ void stlink_send_message(programmer_t *pgm, int count, ...) {
 
 int stlink_read(programmer_t *pgm, unsigned char *buffer, int count) {
 	int r, recv;
-	r = libusb_bulk_transfer(pgm->dev_handle, (1 | LIBUSB_ENDPOINT_IN), buffer, count, &recv, 0);
+	r = libusb_bulk_transfer(DEV_HANDLE(pgm), (1 | LIBUSB_ENDPOINT_IN), buffer, count, &recv, 0);
 	assert(r==0);
 	return(recv);
 }
@@ -182,9 +183,9 @@ int stlink_test_unit_ready(programmer_t *pgm) {
 	memset(&cbw, 0, sizeof(scsi_usb_cbw));
 	cbw.cblength = 0x06;
 	int r;
-	r = stlink_send_cbw(pgm->dev_handle, &cbw);
+	r = stlink_send_cbw(DEV_HANDLE(pgm), &cbw);
 	assert(r == 0);
-	r = stlink_read_csw(pgm->dev_handle, &csw);
+	r = stlink_read_csw(DEV_HANDLE(pgm), &csw);
 	assert(r == 0);
 	return(csw.status == 0);
 }
@@ -201,7 +202,7 @@ int stlink_cmd(programmer_t *pgm, int transfer_length, unsigned char *transfer_o
 	for(i = 0; i < cblength; i++) {
 		cbw.cb[i] = va_arg(ap, int);
 	}
-	assert( stlink_send_cbw(pgm->dev_handle, &cbw) == 0);
+	assert( stlink_send_cbw(DEV_HANDLE(pgm), &cbw) == 0);
 	if(transfer_length) {
 		// Transfer expected, read some raw data
 		if(transfer_out)
@@ -210,7 +211,7 @@ int stlink_cmd(programmer_t *pgm, int transfer_length, unsigned char *transfer_o
 			stlink_read1(pgm, transfer_length);
 	}
 	// Reading status
-	stlink_read_csw(pgm->dev_handle, &csw);
+	stlink_read_csw(DEV_HANDLE(pgm), &csw);
 	return(csw.status == 0);
 }
 
@@ -319,6 +320,11 @@ unsigned int stlink_swim_get_status(programmer_t *pgm) {
 
 bool stlink_open(programmer_t *pgm) {
 	unsigned char buf[18];
+	if(!usb_init(pgm, pgm->usb_vid, pgm->usb_pid)) {
+		fprintf(stderr, "Couldn't initialize stlink");
+		return false;
+	}
+
 	pgm->out_msg_size = 31;
 	stlink_test_unit_ready(pgm);
 	stlink_cmd(pgm, 0x06, buf, 0x80, 6, 0xf1, 0x80, 0x00, 0x00, 0x00, 0x00);
@@ -472,7 +478,7 @@ int stlink_swim_write_block(programmer_t *pgm, unsigned char *buffer,
 	memcpy(cbw.cb+6, block_start2, 2);
 	memcpy(cbw.cb+8+padding, buffer, length1);
 	if(padding) cbw.cb[8] = '\0';
-	assert( stlink_send_cbw(pgm->dev_handle, &cbw) == 0);
+	assert( stlink_send_cbw(DEV_HANDLE(pgm), &cbw) == 0);
 	usleep(3000);
 	if(length2) {
 		// Sending the rest
@@ -480,7 +486,7 @@ int stlink_swim_write_block(programmer_t *pgm, unsigned char *buffer,
 		memcpy(tail, buffer + length1, length2);
 		if(padding) tail[length2] = '\1';
 		int actual;
-		int r = libusb_bulk_transfer(pgm->dev_handle,
+		int r = libusb_bulk_transfer(DEV_HANDLE(pgm),
 				(2 | LIBUSB_ENDPOINT_OUT),
 				tail,
 				length2 + padding,
@@ -489,7 +495,7 @@ int stlink_swim_write_block(programmer_t *pgm, unsigned char *buffer,
 		assert(actual == length2 + padding);
 	}
 	// Reading status
-	stlink_read_csw(pgm->dev_handle, &csw);
+	stlink_read_csw(DEV_HANDLE(pgm), &csw);
 	assert(csw.status == 0);
 	memset(cbw.cb+8, 0, 8);
 	cbw.cb[8] = 0x01;

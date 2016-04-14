@@ -1,7 +1,6 @@
 #ifndef __PGM_H
 #define __PGM_H
 
-#include <libusb.h>
 #include "stm8.h"
 
 typedef enum {
@@ -32,9 +31,9 @@ typedef struct programmer_s {
 	int (*read_range) (struct programmer_s *pgm, const stm8_device_t *device, unsigned char *buffer, unsigned int start, unsigned int length);
 	int (*write_range) (struct programmer_s *pgm, const stm8_device_t *device, unsigned char *buffer, unsigned int start, unsigned int length, const memtype_t memtype);
 
+	void *ctx;
+
 	/* Private */
-	libusb_device_handle *dev_handle;
-	libusb_context *ctx;
 	unsigned int msg_count; // debugging only
 	unsigned int out_msg_size; // stlink/stlinkv2
 } programmer_t;
