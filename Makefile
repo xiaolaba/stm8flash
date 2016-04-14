@@ -1,8 +1,13 @@
 .PHONY: all clean
 ENABLE_USB=1
+ENABLE_SPI=1
 CFLAGS = -g -O3 --std=gnu99 --pedantic
 OBJECTS=main.o byte_utils.o ihex.o stm8.o
 
+ifeq ($(ENABLE_SPI),1)
+OBJECTS+=spi.o
+CFLAGS+=-DENABLE_SPI
+endif
 ifeq ($(ENABLE_USB),1)
 OBJECTS+=usb.o stlink.o stlinkv2.o 
 CFLAGS+=-DENABLE_USB `pkg-config --cflags libusb-1.0` 

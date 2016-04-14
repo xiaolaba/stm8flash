@@ -13,6 +13,9 @@
 #include "stlink.h"
 #include "stlinkv2.h"
 #endif
+#ifdef ENABLE_SPI
+#include "spi.h"
+#endif
 #include "stm8.h"
 #include "ihex.h"
 
@@ -44,6 +47,18 @@ programmer_t pgms[] = {
 		stlink2_srst,
 		stlink2_swim_read_range,
 		stlink2_swim_write_range,
+	},
+#endif
+#ifdef ENABLE_SPI
+	{ 
+		"spi", 
+		0,
+		0,
+		spi_open,
+		spi_close,
+		spi_swim_srst,
+		spi_swim_read_range,
+		spi_swim_write_range,
 	},
 #endif
 	{ NULL },
