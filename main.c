@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
 	char filename[256];
 	memset(filename, 0, sizeof(filename));
 	// Parsing command line
-	char c;
+	int c;
 	action_t action = NONE;
 	bool start_addr_specified = false,
 		pgm_specified = false,
@@ -292,7 +292,7 @@ int main(int argc, char **argv) {
 		int bytes_to_verify;
 		/* reading bytes to RAM */
 		if(is_ext(filename, ".ihx")) {
-			bytes_to_verify = ihex_read(f, buf, start, start + bytes_count);
+			bytes_to_verify = ihex_read(f, buf2, start, start + bytes_count);
 		} else {
 			fseek(f, 0L, SEEK_END);
 			bytes_to_verify = ftell(f);
