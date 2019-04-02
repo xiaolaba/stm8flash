@@ -10,6 +10,7 @@
 #include <linux/ioctl.h>
 #include <linux/spi/spidev.h>
 #include <assert.h>
+#include <errno.h>
 #include "spi.h"
 #include "pgm.h"
 #include "utils.h"
@@ -230,7 +231,7 @@ void dump(unsigned char *ptr, int len, int x)
 }
 #endif
 
-void spi_transact(int spi, unsigned char *buf, struct bitbuf * bb, unsigned char *rcvbuf, int rcvlen)
+bool spi_transact(int spi, unsigned char *buf, struct bitbuf * bb, unsigned char *rcvbuf, int rcvlen)
 {
 	memset(rcvbuf, 0, rcvlen);
 	bb_flush(bb, 0);
@@ -246,7 +247,11 @@ void spi_transact(int spi, unsigned char *buf, struct bitbuf * bb, unsigned char
 		(__u64)(intptr_t)buf, (__u64)(intptr_t)rcvbuf,
 		rcvlen,
 	};
-	ioctl(spi, SPI_IOC_MESSAGE(1), &tf);
+
+	if(ioctl(spi, SPI_IOC_MESSAGE(1), &tf) != rcvlen) {
+		fprintf(stderr, "Kernel rejected SPI transaction: %m\n");
+		return false;
+	}
 #ifdef DEBUG_SPI
 	printf("\n");
 	//dump(buf, rcvlen, 0xff);
@@ -257,9 +262,10 @@ void spi_transact(int spi, unsigned char *buf, struct bitbuf * bb, unsigned char
 	decode(rcvbuf, rcvlen, 0);
 	printf("\n");
 #endif
+	return true;
 }
 
-void send_sync_sequence(int spi);
+bool send_sync_sequence(int spi, int *sync);
 int spi_swim_read_byte(programmer_t *pgm, unsigned int start) 
 {
 	unsigned char sndbuf[256], rcvbuf[256];
@@ -269,7 +275,8 @@ int spi_swim_read_byte(programmer_t *pgm, unsigned int start)
 		//printf("Read byte %x\n", start);
 		bb_init(&bb, sndbuf, sizeof(sndbuf));
 		swim_rotf(&bb, start, 1);
-		spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf));
+		if(!spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf)))
+			return -1;
 
 		bb_init(&bb, rcvbuf, sizeof(rcvbuf));
 		if(swim_ack_check(&bb, 4)) {
@@ -284,7 +291,9 @@ int spi_swim_read_byte(programmer_t *pgm, unsigned int start)
 					// ok
 					bb_init(&bb, sndbuf, sizeof(sndbuf));
 					ls_bit(&bb, 1); // send ack
-					spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf));
+					if(!spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf)))
+						return -1;
+
 					return byte;
 
 				} else {
@@ -297,7 +306,8 @@ int spi_swim_read_byte(programmer_t *pgm, unsigned int start)
 
 		fprintf(stderr, "(retrying read command)");
 		--retry;
-		send_sync_sequence(((spi_context_t*)pgm->ctx)->spi_fd); // the whole sync sequence is not required, but this makes things simpler
+		if(!send_sync_sequence(((spi_context_t*)pgm->ctx)->spi_fd, NULL)) // the whole sync sequence is not required, but this makes things simpler
+			return -1;
 	}
 	
 	fprintf(stderr, "Fatal SWIM Communications error\n");
@@ -312,7 +322,8 @@ bool spi_swim_write_byte(programmer_t *pgm, unsigned char byte, unsigned int sta
 	while(retry > 0) {
 		bb_init(&bb, sndbuf, sizeof(sndbuf));
 		swim_wotf(&bb, start, 1, &byte);
-		spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf));
+		if(!spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf)))
+			return false;
 		
 		bb_init(&bb, rcvbuf, sizeof(rcvbuf));
 		if(swim_ack_check(&bb, 4+1)) 
@@ -320,7 +331,8 @@ bool spi_swim_write_byte(programmer_t *pgm, unsigned char byte, unsigned int sta
 
 		fprintf(stderr, "(retrying write command)");
 		--retry;
-		send_sync_sequence(((spi_context_t*)pgm->ctx)->spi_fd); // the whole sync sequence is not required, but this makes things simpler
+		if(!send_sync_sequence(((spi_context_t*)pgm->ctx)->spi_fd, NULL)) // the whole sync sequence is not required, but this makes things simpler
+			return false;
 	}
 
 	fprintf(stderr, "Fatal SWIM Communications error\n");
@@ -337,11 +349,13 @@ bool spi_finish_session(programmer_t *pgm) {
 	return spi_swim_write_byte(pgm, 0xb6, 0x7f80);
 }
 
-void send_sync_sequence(int spi) {
+bool send_sync_sequence(int spi, int *sync_value) {
 	unsigned char sndbuf[32*SPI_BITS1US/8 + SPI_BYTES1MS * 7];
 	unsigned char rcvbuf[sizeof(sndbuf)];
 	int q=0;
 	int i,j;
+	int sync_start;
+	struct bitbuf bb;
 	for(i=0;i<16*SPI_BITS1US/8;i++)
 		sndbuf[q++] = 0; // low init
 
@@ -364,6 +378,8 @@ void send_sync_sequence(int spi) {
 		for(;j<SPI_BYTES1MS;j++)
 			sndbuf[q++]=0xff; // low .25ms
 	}
+	sync_start = q;
+
 	for(i=0;i<SPI_BYTES1MS/2;i++)
 		sndbuf[q++]=0;
 	
@@ -373,11 +389,47 @@ void send_sync_sequence(int spi) {
 		(__u64)(intptr_t)sndbuf, (__u64)(intptr_t)rcvbuf,
 		q,
 	};
-	ioctl(spi, SPI_IOC_MESSAGE(1), &tf);
-	//dump(sndbuf, q, 0xff);
-	//dump(rcvbuf, q, 0);
+	if(ioctl(spi, SPI_IOC_MESSAGE(1), &tf) != q) {
+		fprintf(stderr, "Kernel rejected SPI transaction: %m\n");
 
-	// TODO: find sync pulse
+		if(errno == EMSGSIZE) {
+			fprintf(stderr, "Suggested workaround: add spidev.bufsiz=8192 to kernel command line\n");
+		}
+
+		return false;
+	}
+
+	if(sync_value) {
+		//dump(rcvbuf+q-SPI_BYTES1MS/2, SPI_BYTES1MS/2, 0);
+		// measure sync frame length
+		bb_init(&bb, rcvbuf + sync_start, sizeof(rcvbuf) - sync_start);
+		
+		for(;;) { // skip initial '1' bits
+			int bit = bb_get(&bb);
+			if(bit < 0) {
+				fprintf(stderr, "Sync frame not received from target\n");
+				return false;
+			}
+
+			if(bit == 0)
+				break;
+		}
+
+		for(i=0;;i++) { // count '0' bits
+			int bit = bb_get(&bb);
+			if(bit < 0) {
+				fprintf(stderr, "Sync frame not received from target\n");
+				return false;
+			}
+
+			if(bit == 1)
+				break;
+		}
+
+		*sync_value = i;
+	}
+
+	return true;
 }
 
 bool spi_open(programmer_t *pgm) {
@@ -412,14 +464,21 @@ bool spi_open(programmer_t *pgm) {
 		return false;
 	}
 
-	// sync sequence
-	send_sync_sequence(spi);
+	int sync;
+	if(!send_sync_sequence(spi, &sync))
+		return false;
+
+	if(sync < 100 | sync > 140) {
+		fprintf(stderr, "Sync frame length invalid: %d\n", sync);
+		return false;
+	}
 
 	spi_context_t *ctx = malloc(sizeof(spi_context_t));
 	ctx->spi_fd = spi;
 	pgm->ctx = ctx;
 	
-	spi_swim_write_byte(pgm, 0xa0, 0x7f80); // mov 0x0a, SWIM_CSR2 ;; Init SWIM
+	if(!spi_swim_write_byte(pgm, 0xa0, 0x7f80)) // mov 0x0a, SWIM_CSR2 ;; Init SWIM
+		return false;
 
 	// de-reset
 	fd = open("/sys/class/gpio/gpio" RST_GPIO "/direction", O_RDWR);
@@ -494,7 +553,9 @@ int spi_swim_read_range(programmer_t *pgm, const stm8_device_t *device, unsigned
 			ls_bit(&bb, 1); // my preemptive ack
 		}
 
-		spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf));
+		if(!spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, rcvbuf, sizeof(rcvbuf)))
+			break;
+
 		bb_init(&bb, rcvbuf, sizeof(rcvbuf));
 
 		bool ok = true;
@@ -543,7 +604,8 @@ int spi_swim_read_range(programmer_t *pgm, const stm8_device_t *device, unsigned
 
 			fprintf(stderr, "(retrying read command)");
 			--retry;
-			send_sync_sequence(((spi_context_t*)pgm->ctx)->spi_fd); // the whole sync sequence is not required, but this makes things simpler
+			if(!send_sync_sequence(((spi_context_t*)pgm->ctx)->spi_fd, NULL)) // the whole sync sequence is not required, but this makes things simpler
+				break;
 		}
 	}
 
@@ -561,7 +623,8 @@ int spi_swim_write_block(programmer_t *pgm, unsigned char *buffer,
 	bb_init(&bb, sndbuf, sizeof(sndbuf));
 	swim_wotf(&bb, start, length, buffer);
 	ls_space(&bb, 2); // for remote ack
-	spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, 0, 0);
+	if(!spi_transact(((spi_context_t*)pgm->ctx)->spi_fd, sndbuf, &bb, 0, 0))
+		return -1;
 
 	return(0);
 }
