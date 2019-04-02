@@ -437,8 +437,6 @@ bool spi_open(programmer_t *pgm) {
 	if(spi < 0)
 		return false;
 
-	int q=1000000*SPI_FREQMHZ;
-	ioctl(spi, SPI_IOC_WR_MAX_SPEED_HZ, &q);
 	int fd = open("/sys/class/gpio/gpio" RST_GPIO "/direction", O_RDWR);
 	if(fd < 0) {
 		fd = open("/sys/class/gpio/export", O_WRONLY);
@@ -464,13 +462,41 @@ bool spi_open(programmer_t *pgm) {
 		return false;
 	}
 
-	int sync;
-	if(!send_sync_sequence(spi, &sync))
-		return false;
+	// workaround for buggy RPI3 SPI driver stack
+	int clock_rates[] = {
+		1000000 * SPI_FREQMHZ,
+		1000000 * 500 / 250 * SPI_FREQMHZ,
+		1000000 * 500 / 350 * SPI_FREQMHZ,
+		1000000 * 500 / 400 * SPI_FREQMHZ,
+		0,
+	};
 
-	if(sync < 100 | sync > 140) {
-		fprintf(stderr, "Sync frame length invalid: %d\n", sync);
-		return false;
+	int clock;
+	for(clock=0;;clock++) {
+		if(!clock_rates[clock]) {
+			fprintf(stderr, "Could not communicate with target\n");
+			return false;
+		}
+
+		if(ioctl(spi, SPI_IOC_WR_MAX_SPEED_HZ, &clock_rates[clock])) {
+			fprintf(stderr, "Can't set SPI frequency: %m\n");
+			return false;
+		}
+		
+		// sync sequence
+		int sync;
+		if(!send_sync_sequence(spi, &sync))
+			continue;
+		//printf("sync = %d\n", sync);
+
+		if(sync > 100 && sync < 140) { // valid sync pulse length
+			if(clock != 0) {
+				fprintf(stderr, "WARNING: SPI driver problem, configured as %dMHz runs at %dMHz\n"
+						"For Raspberry Pi specific solutions, see https://github.com/raspberrypi/linux/issues/2094\n",
+						clock_rates[clock]/1000000, clock_rates[0]/1000000);
+			}
+			break;
+		}
 	}
 
 	spi_context_t *ctx = malloc(sizeof(spi_context_t));
