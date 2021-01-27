@@ -15,7 +15,7 @@ origianl schematic,
 install Pi OS first,  
 ![2021-01-27_Raspberry_Pi_3B_SPI_pinout/install.JPG](2021-01-27_Raspberry_Pi_3B_SPI_pinout/install.JPG)  
 
-boot Pi up, once setup done, [language pack](https://xiaolaba.wordpress.com/2016/04/10/raspberry-pi-3-chinese-characters-display-and-input/) is well prepared, no need any manual installation as before.
+boot Pi up, once setup done, [language pack](https://xiaolaba.wordpress.com/2016/04/10/raspberry-pi-3-chinese-characters-display-and-input/) is well prepared upon your location and timezone preference, no need any manual installation as before.
 
 set whatever you want for this Pi computer,
  user name : pi
