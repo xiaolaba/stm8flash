@@ -1,7 +1,7 @@
 
 
 
-Uses Raspberry PI & SPI interface to minmic SWIM single wire interface for ST MCU flash programming. This version is based on stm8flash, original code supports SWIM & uses ST-LINK hardware. Anszom extended it to support SPI-based SWIM programming. Read the article of design, http://kuku.eu.org/?projects/stm8spi/stm8spi  
+Uses Raspberry PI & SPI interface to mimic SWIM single wire interface for ST MCU flash programming. This version is based on stm8flash, original code supports SWIM & uses ST-LINK hardware. Anszom extended it to support SPI-based SWIM programming. Read the article of design, http://kuku.eu.org/?projects/stm8spi/stm8spi  
 
 
 Raspberry Pi 3 model B, SPI pinout  
