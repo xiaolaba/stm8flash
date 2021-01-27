@@ -21,7 +21,7 @@ set whatever you want for this Pi computer,
  user name : pi
  pwd : xiao
 
-open terminal, build this souftware,  
+open terminal, build this software,  
 ```  
   git clone https://github.com/xiaolaba/stm8flash  
   sudo apt install libusb-1.0  
