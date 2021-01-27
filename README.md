@@ -17,9 +17,9 @@ install Pi OS first,
 
 boot Pi up, once setup done, [language pack](https://xiaolaba.wordpress.com/2016/04/10/raspberry-pi-3-chinese-characters-display-and-input/) is well prepared upon your location and timezone preference, no need any manual installation as before.
 
-set whatever you want for this Pi computer,
- user name : pi
- pwd : xiao
+set whatever you want for this Pi computer,  
+ user name : pi  
+ pwd : xiao  
 
 open terminal, build this software,  
 ```  
