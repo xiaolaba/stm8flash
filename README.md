@@ -4,6 +4,14 @@
 This version is based on stm8flash, original code supports SWIM & uses ST-LINK hardware. Anszom extended it to support SPI-based SWIM programming.
 read the article of design, http://kuku.eu.org/?projects/stm8spi/stm8spi
 
+Raspberry Pi 3 model B, SPI pinout,
+
+
+
+
+
+
+
 
 
 stm8flash
