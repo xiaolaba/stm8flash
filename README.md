@@ -39,10 +39,16 @@ open terminal, build this souftware,
 the job done and ready,  
 ![2021-01-27_Raspberry_Pi_3B_SPI_pinout/2021-01-27-113415_1920x1080_scrot.png](2021-01-27_Raspberry_Pi_3B_SPI_pinout/2021-01-27-113415_1920x1080_scrot.png)
 
+wiring and connection diagram  
 
+![2021-01-27_Raspberry_Pi_3B_SPI_pinout/connection_diagram2021-01-27.jpg](2021-01-27_Raspberry_Pi_3B_SPI_pinout/connection_diagram2021-01-27.jpg)  
 
-
-
+ 
+  
+  
+    
+.    .
+.  
 stm8flash
 =========
 
