@@ -17,7 +17,11 @@ bool usb_init(programmer_t *pgm, unsigned int vid, unsigned int pid) {
 	r = libusb_init(&ctx);
 	if(r < 0) return(false);
 
-	libusb_set_debug(ctx, 3);
+// xiaolaba 2020-01-27
+//	usb.c:20:2: warning: ‘libusb_set_debug’ is deprecated: Use libusb_set_option instead [-Wdeprecated-declarations]
+//  	libusb_set_debug(ctx, 3);
+//	libusb_set_debug(ctx, 3);
+	libusb_set_option(ctx, 3);	
 	cnt = libusb_get_device_list(ctx, &devs);
 	if(cnt < 0) return(false);
 
