@@ -28,7 +28,12 @@ open terminal, build this souftware,
   cd stm8flash  
   make clean  
   make  
-  make install  
+  
+  ## will copy 'stm8flash' to /usr/bin/ 
+  sudo make install
+  
+  ## run this program
+  stm8flash
 ```  
   
 the job done and ready,  
