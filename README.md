@@ -1,8 +1,8 @@
 
 
 
-This version is based on stm8flash, original code supports SWIM & uses ST-LINK hardware. Anszom extended it to support SPI-based SWIM programming.
-read the article of design, http://kuku.eu.org/?projects/stm8spi/stm8spi
+This version is based on stm8flash, original code supports SWIM & uses ST-LINK hardware. Anszom extended it to support SPI-based SWIM programming.  
+read the article of design, http://kuku.eu.org/?projects/stm8spi/stm8spi  
 
 
 Raspberry Pi 3 model B, SPI pinout  
@@ -13,6 +13,8 @@ origianl schematic,
 [2021-01-27_Raspberry_Pi_3B_SPI_pinout/rpi_SCH_3b_1p2_reduced.pdf](2021-01-27_Raspberry_Pi_3B_SPI_pinout/rpi_SCH_3b_1p2_reduced.pdf)
 
 
+install Pi OS first,  
+![2021-01-27_Raspberry_Pi_3B_SPI_pinout/install.JPG](2021-01-27_Raspberry_Pi_3B_SPI_pinout/install.JPG)  
 
 
 
