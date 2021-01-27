@@ -21,15 +21,16 @@ set whatever you want for this Pi computer,
  user name : pi
  pwd : xiao
 
-open terminal, build this souftware,
- 
-  git clone https://github.com/xiaolaba/stm8flash
-  sudo apt install libusb-1.0
-  cd stm8flash
-  make
-
-the job done and ready,
-![2021-01-27_Raspberry_Pi_3B_SPI_pinout\2021-01-27-113415_1920x1080_scrot.png](2021-01-27_Raspberry_Pi_3B_SPI_pinout\2021-01-27-113415_1920x1080_scrot.png)
+open terminal, build this souftware,  
+```  
+  git clone https://github.com/xiaolaba/stm8flash  
+  sudo apt install libusb-1.0  
+  cd stm8flash  
+  make  
+```  
+  
+the job done and ready,  
+![2021-01-27_Raspberry_Pi_3B_SPI_pinout/2021-01-27-113415_1920x1080_scrot.png](2021-01-27_Raspberry_Pi_3B_SPI_pinout/2021-01-27-113415_1920x1080_scrot.png)
 
 
 
