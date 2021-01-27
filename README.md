@@ -6,7 +6,7 @@ read the article of design, http://kuku.eu.org/?projects/stm8spi/stm8spi
 
 Raspberry Pi 3 model B, SPI pinout,  
 
-![2021-01-27_Raspberry_Pi_3B_SPI_pinout\Pi_3B_SPI_pin.JPG](2021-01-27_Raspberry_Pi_3B_SPI_pinout\Pi_3B_SPI_pin.JPG)
+![2021-01-27_Raspberry_Pi_3B_SPI_pinout/Pi_3B_SPI_pin.JPG](2021-01-27_Raspberry_Pi_3B_SPI_pinout/Pi_3B_SPI_pin.JPG)
 
 
 
