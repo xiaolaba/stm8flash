@@ -26,7 +26,9 @@ open terminal, build this souftware,
   git clone https://github.com/xiaolaba/stm8flash  
   sudo apt install libusb-1.0  
   cd stm8flash  
+  make clean  
   make  
+  make install  
 ```  
   
 the job done and ready,  
